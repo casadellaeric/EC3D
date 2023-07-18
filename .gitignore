@@ -396,3 +396,9 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+/bin-int/Debug-x64
+*.vcxproj
+*.filters
+*.sln
+/Klast.sln
+/.gitattributes
