@@ -1,8 +1,11 @@
 #pragma once
 
-#include "utils/common.hpp"
+#include "core/engine.hpp"
 
 namespace klast
 {
 
-}
+void init();
+void shutdown();
+
+}  // namespace klast

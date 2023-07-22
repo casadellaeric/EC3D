@@ -1,6 +1,6 @@
 #pragma once
 
-#include "logger.hpp"
+#include "pch.hpp"
 
 #ifndef NDEBUG
     #define KL_ASSERTIONS_ENABLED
@@ -16,7 +16,7 @@
     #define KL_ASSERT(expression)                                 \
         if (expression) [[likely]] {                              \
         } else {                                                  \
-            KL_CRITICAL_LOG("Assertion failed: {}", #expression); \
+            KL_LOG_CRITICAL("Assertion failed: {}", #expression); \
             DEBUG_BREAK;                                          \
         }
 #else

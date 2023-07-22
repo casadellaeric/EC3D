@@ -61,7 +61,7 @@ Cpp11BracedListStyle: false
 EmptyLineAfterAccessModifier: Always
 EmptyLineBeforeAccessModifier: Always
 FixNamespaceComments: true
-IncludeBlocks: Regroup
+IncludeBlocks: Preserve
 
 IndentAccessModifiers: false
 IndentCaseBlocks: false
@@ -84,7 +84,7 @@ ReflowComments: true
 RequiresClausePosition: WithPreceding
 SeparateDefinitionBlocks: Always
 
-SortIncludes: true
+SortIncludes: false
 SortUsingDeclarations: false
 SpaceAfterCStyleCast: false
 SpaceAfterLogicalNot: false
