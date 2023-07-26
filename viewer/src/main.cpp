@@ -9,18 +9,28 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 {
     try {
         klast::init();
-
-        klast::Engine& engine{ klast::Engine::get() };
-        klast::Engine::InitInfo initInfo{
-            .windowInfo = {DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, "Klast Rendering Engine"},
+        klast::Engine::CreateInfo createInfo{
+            .windowCreateInfo{
+                              .width  = DEFAULT_WINDOW_WIDTH,
+                              .height = DEFAULT_WINDOW_HEIGHT,
+                              .name   = "Klast Rendering Engine",
+                              },
+            .rendererInfo{
+                              .validationLayersEnabled = true,
+                              .verticalSyncEnabled     = true,
+                              },
         };
-        engine.init(initInfo);
+        klast::Engine engine{ createInfo };
         engine.run();
-
+        engine.free();
         klast::shutdown();
     }
     catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
+        return EXIT_FAILURE;
+    }
+    catch (...) {
+        std::cerr << "Unknown exception was thrown!" << std::endl;
         return EXIT_FAILURE;
     }
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "backend/renderer.hpp"
-#include "window.hpp"
 
 namespace klast
 {
@@ -10,27 +9,39 @@ class Engine
 {
 public:
 
-    struct InitInfo {
-        Window::InitInfo windowInfo;
+    struct RendererCreateInfo {
+        const Window::CreateInfo windowCreateInfo{};
+        std::string_view applicationName{};
+        uint32_t applicationVersion{};
+        bool validationLayersEnabled{ false };
+        bool verticalSyncEnabled{ false };
     };
+
+    struct CreateInfo {
+        Window::CreateInfo windowCreateInfo;
+        Engine::RendererCreateInfo rendererInfo;
+    };
+
+    explicit Engine(const Engine::CreateInfo& createInfo);
+    ~Engine() noexcept;
+
+    Engine(const Engine&)            = delete;
+    Engine(Engine&&)                 = delete;
+    Engine& operator=(const Engine&) = delete;
+    Engine& operator=(Engine&&)      = delete;
 
 public:
 
-    Engine(const Engine&) = delete;
-
-    static Engine& get();
-
-    void init(const Engine::InitInfo& initInfo);
     void run();
+    void free();
 
 private:
 
-    Engine();  // Singleton private constructor
+    void init(const Engine::CreateInfo& createInfo);
 
 private:
 
     vulkan::Renderer m_renderer;
-    Window m_window;
 };
 
 }  // namespace klast

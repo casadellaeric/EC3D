@@ -14,8 +14,13 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <iostream>
+#include <utility>
+#include <thread>
 
 // 3rd party
+#define VULKAN_HPP_NO_CONSTRUCTORS
+#define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
 #include <vulkan/vulkan.hpp>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>

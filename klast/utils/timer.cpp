@@ -5,7 +5,7 @@ namespace klast
 {
 
 Timer::Timer() :
-  m_lastTick(std::chrono ::steady_clock::now())
+  m_lastTick{ std::chrono ::steady_clock::now() }
 {
 }
 

@@ -21,7 +21,7 @@ AllowShortCaseLabelsOnASingleLine: true
 AllowShortEnumsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: Inline
 AllowShortIfStatementsOnASingleLine : Never
-AllowShortLambdasOnASingleLine: Empty
+AllowShortLambdasOnASingleLine: All
 AllowShortLoopsOnASingleLine: false
 AlwaysBreakAfterReturnType: None
 AlwaysBreakTemplateDeclarations: Yes
@@ -82,7 +82,7 @@ QualifierAlignment: Left
 ReferenceAlignment: Pointer
 ReflowComments: true
 RequiresClausePosition: WithPreceding
-SeparateDefinitionBlocks: Always
+SeparateDefinitionBlocks: Leave
 
 SortIncludes: false
 SortUsingDeclarations: false
