@@ -11,12 +11,11 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 namespace klast::vulkan
 {
 
-Renderer::Renderer(const Renderer::CreateInfo& createInfo) :
-  m_window{ createInfo.windowCreateInfo },
-  m_validationLayersEnabled{ createInfo.validationLayersEnabled }
+Renderer::Renderer(const Renderer::Info& info) :
+  m_window{ info.windowCreateInfo }
 {
     try {
-        init_vulkan(createInfo);
+        init(info);
     }
     catch (const std::exception& e) {
         KL_LOG_CRITICAL("Unable to initialize Vulkan. Freeing renderer resources. Reason: {}",
@@ -28,25 +27,28 @@ Renderer::Renderer(const Renderer::CreateInfo& createInfo) :
 
 Renderer::~Renderer() noexcept { }
 
-void Renderer::init_vulkan(const Renderer::CreateInfo& createInfo)
+void Renderer::init(const Renderer::Info& info)
 {
     // Get instance independent function pointers with the default dynamic loader
     PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr
         = m_dynamicLoader.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
     VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
 
-    create_instance(createInfo.applicationName,
-                    createInfo.applicationVersion,
-                    createInfo.instanceExtensions);
-    if (m_validationLayersEnabled) {
+    create_instance(info.validationLayers, info.instanceExtensions);
+    if (info.validationLayers) {
         create_debug_messenger();
     }
-    create_device(createInfo.deviceExtensions);
+    m_window.create_surface(m_instance);
+    create_device(info.deviceExtensions, info.verticalSync);
 }
 
 void Renderer::free()
 {
     m_device.free();
+    if (m_window.get_surface()) {
+        m_instance.destroySurfaceKHR(m_window.get_surface());
+        m_window.delete_surface();
+    }
     if (m_debugMessenger) {
         m_instance.destroyDebugUtilsMessengerEXT(m_debugMessenger);
         m_debugMessenger = nullptr;
@@ -55,22 +57,22 @@ void Renderer::free()
         m_instance.destroy();
         m_instance = nullptr;
     }
+    m_window.free();
 }
 
-void Renderer::create_instance(std::string_view applicationName,
-                               uint32_t applicationVersion,
+void Renderer::create_instance(bool validationLayersEnabled,
                                const std::vector<const char*>& requestedExtensions)
 {
     vk::ApplicationInfo applicationInfo{
-        .pApplicationName   = applicationName.data(),
-        .applicationVersion = applicationVersion,
+        .pApplicationName   = "",
+        .applicationVersion = 0,
         .pEngineName        = "Klast",
         .engineVersion      = VK_MAKE_VERSION(1, 0, 0),
         .apiVersion         = VK_MAKE_API_VERSION(0, 1, 3, 0),
     };
 
     std::vector<const char*> layersToEnable{};
-    if (m_validationLayersEnabled) {
+    if (validationLayersEnabled) {
         layersToEnable.push_back("VK_LAYER_KHRONOS_validation");
         if (!instance_supports_layers(layersToEnable)) {
             throw std::runtime_error("Instance does not support required layers!");
@@ -79,7 +81,7 @@ void Renderer::create_instance(std::string_view applicationName,
 
     auto extToEnable{ m_window.get_required_extensions() };
     extToEnable.insert(extToEnable.end(), requestedExtensions.begin(), requestedExtensions.end());
-    if (m_validationLayersEnabled) {
+    if (validationLayersEnabled) {
         extToEnable.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
     if (!instance_supports_extensions(extToEnable)) {
@@ -103,9 +105,9 @@ void Renderer::create_instance(std::string_view applicationName,
 void Renderer::create_debug_messenger()
 {
     vk::DebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo{
-        .messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose
-                           | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
+        .messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
                            | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
+        // vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose
         .messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral
                        | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation
                        | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
@@ -116,16 +118,20 @@ void Renderer::create_debug_messenger()
     m_debugMessenger = m_instance.createDebugUtilsMessengerEXT(debugMessengerCreateInfo);
 }
 
-void Renderer::create_device(const std::vector<const char*>& requestedExtensions)
+void Renderer::create_device(const std::vector<const char*>& requestedExtensions,
+                             bool verticalSyncEnabled)
 {
     std::vector<vk::PhysicalDevice> physDevices{ m_instance.enumeratePhysicalDevices() };
 
-    Device::CreateInfo deviceCreateInfo{
+    Device::Info deviceInfo{
         .availablePhysicalDevices = physDevices,
         .extensionsToEnable       = requestedExtensions,
+        .surface                  = m_window.get_surface(),
+        .framebufferSize          = m_window.get_framebuffer_size(),
+        .verticalSync             = verticalSyncEnabled,
     };
 
-    m_device = Device(deviceCreateInfo);
+    m_device = Device(deviceInfo);
 
     // Update dynamic loader with device functions
     VULKAN_HPP_DEFAULT_DISPATCHER.init(m_device.get_logical_handle());
@@ -134,6 +140,14 @@ void Renderer::create_device(const std::vector<const char*>& requestedExtensions
 bool Renderer::instance_supports_layers(const std::vector<const char*>& requiredLayerNames)
 {
     const auto instLayerProperties{ vk::enumerateInstanceLayerProperties() };
+
+#ifdef KL_LOGGING_ENABLED
+    std::string layersMsg{ "\nSupported validation layers: \n" };
+    for (auto& layer : instLayerProperties) {
+        layersMsg.append(std::format("\t{}\n", layer.layerName.data()));
+    }
+    KL_LOG_DEBUG("{}", layersMsg);
+#endif
 
     std::vector<const char*> instLayerNames;
     std::ranges::transform(instLayerProperties,
@@ -147,6 +161,14 @@ bool Renderer::instance_supports_layers(const std::vector<const char*>& required
 bool Renderer::instance_supports_extensions(const std::vector<const char*>& requiredExtNames)
 {
     const auto instExtProperties{ vk::enumerateInstanceExtensionProperties() };
+
+#ifdef KL_LOGGING_ENABLED
+    std::string extMsg{ "\nSupported instance extensions: \n" };
+    for (auto& ext : instExtProperties) {
+        extMsg.append(std::format("\t{}\n", ext.extensionName.data()));
+    }
+    KL_LOG_DEBUG("{}", extMsg);
+#endif
 
     std::vector<const char*> instExtNames;
     std::ranges::transform(instExtProperties,

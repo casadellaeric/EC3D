@@ -21,4 +21,18 @@ bool contains_all_names(const std::vector<const char*>& bigSet,
         { return std::ranges::find(bigSetSv, std::string_view(c)) != bigSetSv.end(); });
 }
 
+uint32_t find_memory_type_index(vk::PhysicalDeviceMemoryProperties availableMemoryProperties,
+                                vk::MemoryPropertyFlags selectedMemoryProperties,
+                                uint32_t allowedMemoryTypes)
+{
+    for (uint32_t i = 0; i < availableMemoryProperties.memoryTypeCount; ++i) {
+        if ((allowedMemoryTypes & (1 << i))
+            && ((availableMemoryProperties.memoryTypes[i].propertyFlags & selectedMemoryProperties)
+                == selectedMemoryProperties)) {
+            return i;
+        }
+    }
+    throw std::runtime_error("Failed to find memory type with requested properties!");
+}
+
 }  // namespace klast::vulkan

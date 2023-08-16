@@ -401,3 +401,4 @@ FodyWeavers.xsd
 *.filters
 *.sln
 /Klast.sln
+/bin-int/Release-x64

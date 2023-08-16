@@ -3,17 +3,15 @@
 
 namespace klast
 {
-Window::Window(const Window::CreateInfo& createInfo) :
-  m_handle(create_window_glfw(createInfo.width, createInfo.height, createInfo.name)),
-  m_width(createInfo.width),
-  m_height(createInfo.height)
+
+Window::Window(const Window::Info& info) :
+  m_handle(create_window_glfw(info.width, info.height, info.name)),
+  m_width(info.width),
+  m_height(info.height)
 {
 }
 
-Window::~Window()
-{
-    free();
-}
+Window::~Window() { }
 
 void Window::free()
 {
@@ -22,6 +20,13 @@ void Window::free()
     }
     glfwDestroyWindow(m_handle);
     glfwTerminate();  // TODO: Don't terminate if in a multi-window application
+}
+
+std::tuple<int, int> Window::get_framebuffer_size() const
+{
+    int width, height;
+    glfwGetFramebufferSize(m_handle, &width, &height);
+    return std::make_tuple(width, height);
 }
 
 std::vector<const char*> Window::get_required_extensions() const
@@ -34,6 +39,13 @@ std::vector<const char*> Window::get_required_extensions() const
     }
 
     return std::vector<const char*>(requiredExtensions, requiredExtensions + extensionCount);
+}
+
+void Window::create_surface(vk::Instance instance)
+{
+    VkSurfaceKHR surface;
+    glfwCreateWindowSurface(instance, m_handle, nullptr, &surface);
+    m_surface = vk::SurfaceKHR(surface);
 }
 
 GLFWwindow* create_window_glfw(int width, int height, std::string_view windowName)

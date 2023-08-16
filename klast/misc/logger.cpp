@@ -33,12 +33,12 @@ constexpr spdlog::level::level_enum kl_severity_to_spdlog_level(const log::Sever
 {
     using enum log::Severity;
     switch (severity) {
-        case klSeverityOff: return spdlog::level::off;
-        case klSeverityCritical: return spdlog::level::critical;
-        case klSeverityError: return spdlog::level::err;
-        case klSeverityWarning: return spdlog::level::warn;
-        case klSeverityInfo: return spdlog::level::info;
-        case klSeverityDebug: [[fallthrough]];
+        case off: return spdlog::level::off;
+        case critical: return spdlog::level::critical;
+        case error: return spdlog::level::err;
+        case warning: return spdlog::level::warn;
+        case info: return spdlog::level::info;
+        case debug: [[fallthrough]];
         default: return spdlog::level::debug;
     }
 }

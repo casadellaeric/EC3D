@@ -27,7 +27,7 @@
 #include <spdlog/spdlog.h>
 
 // Klast
-#include "utils/assertion.hpp"
-#include "utils/logger.hpp"
+#include "misc/assertion.hpp"
+#include "misc/logger.hpp"
 
 #pragma warning(pop)

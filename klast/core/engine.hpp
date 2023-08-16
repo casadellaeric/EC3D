@@ -1,6 +1,8 @@
 #pragma once
 
 #include "backend/renderer.hpp"
+#include "backend/utils.hpp"
+#include "backend/graphics_context.hpp"
 
 namespace klast
 {
@@ -9,20 +11,13 @@ class Engine
 {
 public:
 
-    struct RendererCreateInfo {
-        const Window::CreateInfo windowCreateInfo{};
-        std::string_view applicationName{};
-        uint32_t applicationVersion{};
-        bool validationLayersEnabled{ false };
-        bool verticalSyncEnabled{ false };
+    struct Info {
+        bool validationLayers{};
+        bool verticalSync{};
+        Window::Info windowInfo{};
     };
 
-    struct CreateInfo {
-        Window::CreateInfo windowCreateInfo;
-        Engine::RendererCreateInfo rendererInfo;
-    };
-
-    explicit Engine(const Engine::CreateInfo& createInfo);
+    explicit Engine(const Engine::Info& info);
     ~Engine() noexcept;
 
     Engine(const Engine&)            = delete;
@@ -37,11 +32,12 @@ public:
 
 private:
 
-    void init(const Engine::CreateInfo& createInfo);
+    void init(const Engine::Info& info);
+    void create_test_renderpass(vulkan::GraphicsContext& context);
 
 private:
 
-    vulkan::Renderer m_renderer;
+    vulkan::Renderer m_renderer{};
 };
 
 }  // namespace klast

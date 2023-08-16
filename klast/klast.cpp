@@ -6,9 +6,13 @@ namespace klast
 
 void init()
 {
-    log::register_macro_logger(log::Severity::klSeverityDebug);
+    std::cout << "Initializing Klast." << std::endl;
+    log::register_macro_logger(log::Severity::debug);
 }
 
-void shutdown() { }
+void shutdown()
+{
+    std::cout << "Shutting down Klast." << std::endl;
+}
 
 }  // namespace klast

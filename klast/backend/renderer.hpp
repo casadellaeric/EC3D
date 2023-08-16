@@ -13,18 +13,16 @@ class Renderer
 {
 public:
 
-    struct CreateInfo {
-        const Window::CreateInfo windowCreateInfo{};
-        const std::string_view applicationName{};
-        const uint32_t applicationVersion{};
-        const bool validationLayersEnabled{ false };
-        const bool verticalSyncEnabled{ false };
-        const std::vector<const char*> instanceExtensions{};
-        const std::vector<const char*> deviceExtensions{};
+    struct Info {
+        bool validationLayers{};
+        bool verticalSync{};
+        std::vector<const char*> instanceExtensions{};
+        std::vector<const char*> deviceExtensions{};
+        Window::Info windowCreateInfo{};
     };
 
     Renderer() = default;
-    explicit Renderer(const Renderer::CreateInfo& createInfo);
+    explicit Renderer(const Renderer::Info& info);
     ~Renderer() noexcept;
 
     Renderer(const Renderer&)            = delete;
@@ -32,23 +30,28 @@ public:
     Renderer& operator=(const Renderer&) = delete;
     Renderer& operator=(Renderer&&)      = default;
 
-public:
-
     void free();
-    inline bool close_signalled() { return m_window.close_signalled(); };
+
+    inline bool close_signalled() const { return m_window.close_signalled(); };
     inline void poll_events() { m_window.poll_events(); };
+    inline const vk::Format get_presentable_image_format()
+    {
+        return m_device.get_swapchain_image_format();
+    }
+
+    inline GraphicsContext& create_graphics_context()
+    {
+        return m_device.create_graphics_context();
+    };
 
 private:
 
-    void init_vulkan(const Renderer::CreateInfo& createInfo);
-    void create_instance(std::string_view applicationName,
-                         uint32_t applicationVersion,
+    void init(const Renderer::Info& info);
+    void create_instance(const bool validationLayersEnabled,
                          const std::vector<const char*>& instExtensions);
     void create_debug_messenger();
-    void create_surface();
-    void create_device(const std::vector<const char*>& requestedExtensions);
-    void create_swapchain();
-    void create_queues();
+    void create_device(const std::vector<const char*>& requestedExtensions,
+                       bool verticalSyncEnabled);
 
 private:
 
@@ -59,11 +62,6 @@ private:
     vk::DebugUtilsMessengerEXT m_debugMessenger;
 
     Device m_device;
-
-    vk::SwapchainKHR m_swapchain;
-
-    // Misc. members
-    bool m_validationLayersEnabled{};
 
 private:  // Support objects and functions
 

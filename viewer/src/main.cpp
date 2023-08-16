@@ -9,20 +9,19 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 {
     try {
         klast::init();
-        klast::Engine::CreateInfo createInfo{
-            .windowCreateInfo{
-                              .width  = DEFAULT_WINDOW_WIDTH,
-                              .height = DEFAULT_WINDOW_HEIGHT,
-                              .name   = "Klast Rendering Engine",
-                              },
-            .rendererInfo{
-                              .validationLayersEnabled = true,
-                              .verticalSyncEnabled     = true,
-                              },
+        klast::Engine::Info engineInfo{
+            .validationLayers = true,
+            .verticalSync     = true,
+            .windowInfo{
+                        .width  = DEFAULT_WINDOW_WIDTH,
+                        .height = DEFAULT_WINDOW_HEIGHT,
+                        .name   = "Klast Rendering Engine",
+                        }
         };
-        klast::Engine engine{ createInfo };
+        klast::Engine engine{ engineInfo };
         engine.run();
         engine.free();
+
         klast::shutdown();
     }
     catch (const std::exception& e) {

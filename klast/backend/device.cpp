@@ -1,31 +1,55 @@
 #include "pch.hpp"
 #include "device.hpp"
 #include "utils.hpp"
+#include "graphics_context.hpp"
+
 #include <set>
 
 namespace klast::vulkan
 {
 
-Device::Device(const Device::CreateInfo& createInfo)
+Device::Device(const Device::Info& info) :
+  m_surface(&info.surface)
 {
     try {
-        obtain_physical_device(createInfo.availablePhysicalDevices);
-        create_device(createInfo.extensionsToEnable);
+        obtain_physical_device(info.availablePhysicalDevices);
+        create_device(info.extensionsToEnable);
+        create_swapchain(info.framebufferSize, info.verticalSync);
     }
     catch (const std::exception& e) {
-        KL_LOG_CRITICAL("Unable to obtain a device that meets specified requirements. Reason: {}",
-                        e.what());
+        KL_LOG_CRITICAL("Unable to initialize Device. Reason: {}", e.what());
         free();
         throw;
     }
 }
 
+Device::~Device() noexcept { }
+
 void Device::free()
 {
+    m_logicalDevice.waitIdle();
+    if (m_graphicsContext) {
+        m_graphicsContext->free();
+    }
+    m_swapchain.free(m_logicalDevice);
     if (m_logicalDevice) {
         m_logicalDevice.destroy();
         m_logicalDevice = nullptr;
     }
+}
+
+GraphicsContext& Device::create_graphics_context()
+{
+    GraphicsContext::Info contextInfo{
+        .device                 = m_logicalDevice,
+        .deviceMemoryProperties = m_memoryProperties,
+        .swapchain              = m_swapchain,
+        .queue                  = m_queues.graphics,
+        .queueFamilyIndex       = static_cast<uint32_t>(m_queueFamilyIndices.graphics),
+    };
+    m_graphicsContext.emplace(contextInfo);
+
+    return m_graphicsContext.value();
 }
 
 void Device::obtain_physical_device(const std::vector<vk::PhysicalDevice>& physDevices)
@@ -34,12 +58,15 @@ void Device::obtain_physical_device(const std::vector<vk::PhysicalDevice>& physD
         throw std::runtime_error("Unable to find a physical device in the current instance!");
     }
 
-    auto selPhysDevice = std::ranges::find_if(physDevices, physical_device_meets_requirements);
+    auto selPhysDevice = std::ranges::find_if(physDevices,
+                                              [&](vk::PhysicalDevice pd)
+                                              { return physical_device_meets_requirements(pd); });
     if (selPhysDevice == physDevices.end()) {
         throw std::runtime_error("Unable to find a physical device that meets the requirements!");
     }
 
-    m_physicalDevice = *selPhysDevice;
+    m_physicalDevice   = *selPhysDevice;
+    m_memoryProperties = m_physicalDevice.getMemoryProperties();
 }
 
 void Device::create_device(const std::vector<const char*>& extToEnable)
@@ -63,18 +90,63 @@ void Device::create_device(const std::vector<const char*>& extToEnable)
 
     // TODO: Add features
     vk::PhysicalDeviceFeatures physDeviceFeatures{};
-    vk::DeviceCreateInfo deviceCreateInfo{ .queueCreateInfoCount
+
+    // Hard-coded extensions here
+    std::vector<const char*> extensions{ extToEnable };
+
+    vk::PhysicalDeviceSynchronization2Features sync2Features{
+        .synchronization2 = true,
+    };
+
+    vk::DeviceCreateInfo deviceCreateInfo{ .pNext = &sync2Features,
+                                           .queueCreateInfoCount
                                            = static_cast<uint32_t>(queueCreateInfos.size()),
                                            .pQueueCreateInfos = queueCreateInfos.data(),
                                            .enabledExtensionCount
-                                           = static_cast<uint32_t>(extToEnable.size()),
-                                           .ppEnabledExtensionNames = extToEnable.data(),
+                                           = static_cast<uint32_t>(extensions.size()),
+                                           .ppEnabledExtensionNames = extensions.data(),
                                            .pEnabledFeatures        = &physDeviceFeatures };
 
     m_logicalDevice = m_physicalDevice.createDevice(deviceCreateInfo);
+
+    m_queues.graphics = m_logicalDevice.getQueue(m_queueFamilyIndices.graphics, 0);
+    m_queues.present  = m_logicalDevice.getQueue(m_queueFamilyIndices.present, 0);
+    m_queues.transfer = m_logicalDevice.getQueue(m_queueFamilyIndices.transfer, 0);
 }
 
-QueueFamilyIndices obtain_queue_family_indices(vk::PhysicalDevice physDevice)
+void Device::create_swapchain(std::tuple<int, int> framebufferSize, bool verticalSyncEnabled)
+{
+    Swapchain::Info swapchainInfo{
+        .physDevice      = m_physicalDevice,
+        .device          = m_logicalDevice,
+        .surface         = *m_surface,
+        .framebufferSize = framebufferSize,
+        .verticalSync    = verticalSyncEnabled,
+    };
+
+    m_swapchain = Swapchain(swapchainInfo);
+}
+
+bool Device::physical_device_meets_requirements(const vk::PhysicalDevice& physDevice)
+{
+    // auto physDeviceProperties{ physDevice.getProperties() };
+    // auto physDeviceFeatures{ physDevice.getFeatures() };
+
+    std::vector<const char*> extToEnable{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+    if (!device_supports_extensions(physDevice, extToEnable)) {
+        return false;
+    }
+
+    auto queueFamilyIndices{ obtain_queue_family_indices(physDevice) };
+    if (!queueFamilyIndices.all_valid()) {  // TODO: Allow a selection of queue families
+        return false;
+    }
+
+    m_queueFamilyIndices = queueFamilyIndices;
+    return true;
+}
+
+QueueFamilyIndices Device::obtain_queue_family_indices(vk::PhysicalDevice physDevice)
 {
     const auto queueFamilyProperties{ physDevice.getQueueFamilyProperties() };
     QueueFamilyIndices queueFamilyIndices{};
@@ -83,23 +155,41 @@ QueueFamilyIndices obtain_queue_family_indices(vk::PhysicalDevice physDevice)
         if (queueFamily.queueCount == 0) {
             continue;
         }
-        if (queueFamily.queueFlags | vk::QueueFlagBits::eGraphics) {
+
+        if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) {
             queueFamilyIndices.graphics = i;
         }
-        // TODO: physDevice.getSurfaceSupportKHR();
-        if (queueFamily.queueFlags | vk::QueueFlagBits::eCompute) {
+
+        auto surfaceSupport = physDevice.getSurfaceSupportKHR(static_cast<uint32_t>(i), *m_surface);
+        if (surfaceSupport) {
             queueFamilyIndices.present = i;
         }
+
+        if (queueFamily.queueFlags & vk::QueueFlagBits::eTransfer) {
+            queueFamilyIndices.transfer = i;
+        }
+
+        // if (queueFamilyIndices.all_valid()) {
+        //     break;
+        // }
     }
-}
-// TODO
-return queueFamilyIndices;
+    return queueFamilyIndices;
 }
 
 bool device_supports_extensions(vk::PhysicalDevice physDevice,
                                 const std::vector<const char*>& requiredExtNames)
 {
     const auto devExtProperties{ physDevice.enumerateDeviceExtensionProperties() };
+
+#ifdef KL_LOGGING_ENABLED
+    const auto deviceProps{ physDevice.getProperties() };
+    std::string extMsg{ std::format("\nDevice {} supported extensions: \n",
+                                    deviceProps.deviceName.data()) };
+    for (auto& ext : devExtProperties) {
+        extMsg.append(std::format("\t{}\n", ext.extensionName.data()));
+    }
+    KL_LOG_DEBUG("{}", extMsg);
+#endif
 
     std::vector<const char*> devExtNames;
     std::ranges::transform(devExtProperties,
@@ -108,23 +198,6 @@ bool device_supports_extensions(vk::PhysicalDevice physDevice,
                            { return extProperty.extensionName.data(); });
 
     return contains_all_names(devExtNames, requiredExtNames);
-}
-
-bool physical_device_meets_requirements(const vk::PhysicalDevice& physDevice)
-{
-    // auto physDeviceProperties{ physDevice.getProperties() };
-    // auto physDeviceFeatures{ physDevice.getFeatures() };
-    std::vector<const char*> extToEnable{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-    if (!device_supports_extensions(physDevice, extToEnable)) {
-        return false;
-    }
-
-    auto queueFamilyIndices{ obtain_queue_family_indices(physDevice) };
-    if (!queueFamilyIndices.all_valid()) {
-        return false;
-    }
-
-    return true;
 }
 
 }  // namespace klast::vulkan
