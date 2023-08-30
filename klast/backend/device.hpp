@@ -40,6 +40,7 @@ public:
     const vk::PhysicalDevice& get_physical_handle() const { return m_physicalDevice; };
     const vk::Device& get_logical_handle() const { return m_logicalDevice; }
     const vk::Format get_swapchain_image_format() const { return m_swapchain.get_format(); }
+    const vk::Extent2D get_swapchain_extent() const { return m_swapchain.get_extent(); }
 
     GraphicsContext& create_graphics_context();
 

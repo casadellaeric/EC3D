@@ -25,6 +25,8 @@ void Engine::run()
 {
     auto& context{ m_renderer.create_graphics_context() };
     create_test_renderpass(context);
+    add_test_pipeline(context);
+    // create_test_pipeline(context);
 
     Timer timer{};
     timer.reset();
@@ -48,7 +50,7 @@ void Engine::run()
 
         // Rendering loop
         VkClearValue testClearValue{};
-        testClearValue.color = { glm::sin((float)frameCount / 144.f) };
+        testClearValue.color = { glm::sin(addedFrameTime) };
         context.set_clear_value(0, testClearValue);
         context.render();
     }
@@ -114,6 +116,38 @@ void Engine::create_test_renderpass(vulkan::GraphicsContext& context)
     };
 
     context.create_render_pass(renderPassInfo);
+}
+
+void Engine::add_test_pipeline(vulkan::GraphicsContext& context)
+{
+    std::vector<vulkan::ShaderInfo> shaders{};
+    shaders.resize(2);
+    shaders[0] = {
+        .filePath = "./shaders/basic-vert.spv",
+        .stage    = vk::ShaderStageFlagBits::eVertex,
+    };
+    shaders[1] = {
+        .filePath = "./shaders/basic-frag.spv",
+        .stage    = vk::ShaderStageFlagBits::eFragment,
+    };
+
+    struct Vertex {
+        glm::vec3 position;
+        glm::vec3 color;
+    };
+
+    std::vector<vulkan::VertexAttributeDescription> attributeDescriptions(2);
+    attributeDescriptions[0] = { vk::Format::eR16G16B16Sfloat, 0, offsetof(Vertex, position) };
+    attributeDescriptions[1] = { vk::Format::eR16G16B16Sfloat, 0, offsetof(Vertex, position) };
+
+    vulkan::GraphicsPipelineInfo pipelineInfo{
+        .shaders                  = shaders,
+        .bindingStrides           = { sizeof(Vertex) },
+        .attributeDescriptions    = attributeDescriptions,
+        .blendEnableInAttachments = { VK_FALSE },
+        .subpassIdx               = 0,
+    };
+    context.create_pipeline(pipelineInfo);
 }
 
 }  // namespace klast

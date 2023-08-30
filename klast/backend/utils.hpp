@@ -2,6 +2,7 @@
 
 #include <ranges>
 #include <vulkan/vulkan.hpp>
+#include <filesystem>
 
 namespace klast::vulkan
 {
@@ -12,5 +13,7 @@ bool contains_all_names(const std::vector<const char*>& bigSet,
 uint32_t find_memory_type_index(vk::PhysicalDeviceMemoryProperties availableMemoryProperties,
                                 vk::MemoryPropertyFlags selectedMemoryProperties,
                                 uint32_t allowedMemoryTypes);
+
+std::vector<uint32_t> read_file(std::string_view filePath);
 
 }  // namespace klast::vulkan

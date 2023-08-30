@@ -27,8 +27,9 @@ void Swapchain::create(const Swapchain::Info& info)
     auto& physDevice{ info.physDevice };
 
     auto surfaceCapabilities{ physDevice.getSurfaceCapabilitiesKHR(surface) };
-    uint32_t imageCount
-        = max(surfaceCapabilities.minImageCount + 1, 3);  // We want at least triple buffering
+    uint32_t imageCount = (surfaceCapabilities.minImageCount + 1 > 3)
+                              ? surfaceCapabilities.minImageCount + 1
+                              : 3;  // We want triple buffering
     if (surfaceCapabilities.maxImageCount > 0 && surfaceCapabilities.maxImageCount < imageCount) {
         imageCount = surfaceCapabilities.maxImageCount;
     }

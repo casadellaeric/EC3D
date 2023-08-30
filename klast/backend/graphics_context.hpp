@@ -2,9 +2,8 @@
 
 #include <optional>
 #include <vulkan/vulkan.hpp>
-#include <glm/glm.hpp>
 #include "swapchain.hpp"
-#include "shader.hpp"
+#include "pipeline.hpp"
 
 namespace klast::vulkan
 {
@@ -68,6 +67,10 @@ public:
     void free();
 
     void create_render_pass(const RenderPassInfo& info);
+
+    // TODO: Create context struct to avoid having unnecessary fields when calling this function
+    uint32_t create_pipeline(GraphicsPipelineInfo& info);
+
     void render();
 
     inline void set_clear_value(uint32_t attachmentIndex, VkClearValue& clearValue)
@@ -83,7 +86,6 @@ private:
                                   vk::ImageLayout layout,
                                   vk::ImageAspectFlags aspect);
     void create_framebuffers();
-    void create_pipeline(const vk::Pipeline pipeline);
 
     void create_frame_synchronization();
     void create_command_pool();
@@ -95,10 +97,15 @@ private:
 
 private:
 
+    // External
     vk::Device m_device;
     const vk::PhysicalDeviceMemoryProperties* m_deviceMemoryProperties;
     const Swapchain* m_swapchain;
 
+    vk::Queue m_graphicsQueue;
+    uint32_t m_graphicsQueueIndex;
+
+    // Render pass
     vk::RenderPass m_renderPass{};
     RenderPassInfo m_renderPassInfo{};
 
@@ -106,8 +113,8 @@ private:
     uint32_t m_swapchainAttachmentIndex{};
     std::vector<vk::Framebuffer> m_framebuffers{};
 
-    vk::Queue m_graphicsQueue;
-    uint32_t m_graphicsQueueIndex;
+    // Pipeline
+    PipelineManager m_pipelineManager{};
 
     // Per frame-in-flight
     uint32_t m_currentFrameIdx{};

@@ -12,13 +12,15 @@ GraphicsContext::GraphicsContext(const GraphicsContext::Info& info) :
   m_graphicsQueue{ info.queue },
   m_graphicsQueueIndex{ info.queueFamilyIndex },
   m_swapchain{ &info.swapchain },
-  m_currentFrameIdx{ 0 }
+  m_currentFrameIdx{ 0 },
+  m_pipelineManager{ PipelineManager::Info{ .device = m_device } }
 {
 }
 
 void GraphicsContext::free()
 {
     m_graphicsQueue.waitIdle();
+    m_pipelineManager.free();
     for (auto& frame : m_frames) {
         if (frame.imageAvailableSemaphore) {
             m_device.destroySemaphore(frame.imageAvailableSemaphore);
@@ -229,6 +231,13 @@ void GraphicsContext::create_render_pass(const RenderPassInfo& info)
     }
 }
 
+uint32_t GraphicsContext::create_pipeline(GraphicsPipelineInfo& info)
+{
+    info.viewportExtent = m_swapchain->get_extent();
+    info.renderPass     = m_renderPass;
+    return m_pipelineManager.create_basic_graphics_pipeline(info);
+}
+
 void GraphicsContext::render()
 {
     std::ignore = m_device.waitForFences(m_frames[m_currentFrameIdx].imageRenderedFence,
@@ -367,8 +376,11 @@ void GraphicsContext::record_commands(uint32_t frameIndex, uint32_t imageIndex)
     for (size_t i = 0; i < m_renderPassInfo.subpasses.size(); ++i) {
         if (i != 0) {
             commandBuffer.nextSubpass(vk::SubpassContents::eInline);
-            // Subpass-specific commands
         }
+        // Subpass-specific commands
+
+        commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
+                                   m_pipelineManager.get_pipeline());
     };
 
     commandBuffer.endRenderPass();

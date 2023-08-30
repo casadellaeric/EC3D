@@ -37,7 +37,7 @@ public:
     const SwapchainImage& get_image(uint32_t index) const { return m_swapchainImages[index]; }
     size_t get_num_images() const { return m_swapchainImages.size(); }
     vk::Format get_format() const { return m_swapchainImageFormat.format; }
-    vk::Extent2D get_extent() const { return m_swapchainExtent; }
+    const vk::Extent2D& get_extent() const { return m_swapchainExtent; }
 
 private:
 

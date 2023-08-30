@@ -34,6 +34,7 @@ private:
 
     void init(const Engine::Info& info);
     void create_test_renderpass(vulkan::GraphicsContext& context);
+    void add_test_pipeline(vulkan::GraphicsContext& context);
 
 private:
 

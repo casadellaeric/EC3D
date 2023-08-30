@@ -3,6 +3,8 @@
 #pragma warning(push)
 #pragma warning(disable : 4623 5045 6285 26450 26451 26495 26498 26800)
 
+#define NOMINMAX
+
 #ifdef _WIN32
     #include <Windows.h>
 #endif
