@@ -1,4 +1,4 @@
-#include <klast/klast.hpp>
+#include <EC3D/ec3d.hpp>
 
 #include <iostream>
 
@@ -8,28 +8,31 @@ constexpr int DEFAULT_WINDOW_HEIGHT{ 675 };
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 {
     try {
-        klast::init();
-        klast::Engine::Info engineInfo{
+        ec::init();
+        ec::Engine::Info engineInfo{
             .validationLayers = true,
             .verticalSync     = true,
             .windowInfo{
                         .width  = DEFAULT_WINDOW_WIDTH,
                         .height = DEFAULT_WINDOW_HEIGHT,
-                        .name   = "Klast Rendering Engine",
+                        .name   = "EC3D Renderer",
                         }
         };
-        klast::Engine engine{ engineInfo };
+        ec::Engine engine{ engineInfo };
         engine.run();
         engine.free();
 
-        klast::shutdown();
+        ec::shutdown();
+        system("pause");
     }
     catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
+        system("pause");
         return EXIT_FAILURE;
     }
     catch (...) {
         std::cerr << "Unknown exception was thrown!" << std::endl;
+        system("pause");
         return EXIT_FAILURE;
     }
 

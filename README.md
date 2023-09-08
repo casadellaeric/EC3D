@@ -1,2 +1,2 @@
-# Klast
-Klast Renderer
+# EC3D
+EC3D Renderer

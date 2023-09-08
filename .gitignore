@@ -400,5 +400,6 @@ FodyWeavers.xsd
 *.vcxproj
 *.filters
 *.sln
-/Klast.sln
+/EC3D.sln
 /bin-int/Release-x64
+viewer/models
