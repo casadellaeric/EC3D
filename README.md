@@ -1,2 +1,2 @@
 # EC3D
-EC3D Renderer
+Experimental Vulkan abstraction, very early stages.
